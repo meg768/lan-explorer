@@ -73,7 +73,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("LAN Scanner")
+        .navigationTitle("LAN Explorer")
         .navigationSubtitle(store.localNetwork?.displayName ?? "No local IPv4 network")
         .toolbar {
             ToolbarItem {

@@ -165,7 +165,7 @@ enum ScanStatus: Equatable {
 }
 
 extension NetworkDevice {
-    var deviceType: String { LANScanner.deviceHints(for: self).joined(separator: ", ") }
+    var deviceType: String { NetworkScanner.deviceHints(for: self).joined(separator: ", ") }
 }
 
 extension DateFormatter {

@@ -1,7 +1,7 @@
 import Foundation
 import Network
 
-actor LANScanner {
+actor NetworkScanner {
     private let maxConcurrentPings = 32
 
     private let servicePorts = [
@@ -317,7 +317,7 @@ actor LANScanner {
         let url = "\(probe.scheme)://\(host):\(probe.port)/"
         let result = await run(
             "/usr/bin/curl",
-            arguments: ["-k", "-L", "--max-time", "2", "-A", "LANScanner/1.0", "-i", url],
+            arguments: ["-k", "-L", "--max-time", "2", "-A", "LANExplorer/1.0", "-i", url],
             timeout: 3
         )
 

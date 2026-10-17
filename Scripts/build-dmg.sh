@@ -2,24 +2,24 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="LAN Scanner"
+APP_NAME="LAN Explorer"
 APP_DIR="${ROOT_DIR}/dist/${APP_NAME}.app"
-DMG_NAME="lan-scanner.dmg"
+DMG_NAME="lan-explorer.dmg"
 DMG_PATH="${ROOT_DIR}/dist/${DMG_NAME}"
-VOLUME_NAME="LAN Scanner Installer"
-RW_DMG_PATH="${ROOT_DIR}/dist/lan-scanner-rw.dmg"
+VOLUME_NAME="LAN Explorer Installer"
+RW_DMG_PATH="${ROOT_DIR}/dist/lan-explorer-rw.dmg"
 
 cd "${ROOT_DIR}"
 
 "${ROOT_DIR}/Scripts/build-app.sh" release
 
-for volume in "/Volumes/LAN Scanner" "/Volumes/LAN Scanner "* "/Volumes/${VOLUME_NAME}" "/Volumes/${VOLUME_NAME} "*; do
+for volume in "/Volumes/LAN Explorer" "/Volumes/LAN Explorer "* "/Volumes/${VOLUME_NAME}" "/Volumes/${VOLUME_NAME} "*; do
   if [[ -e "${volume}" ]]; then
     hdiutil detach "${volume}" >/dev/null || true
   fi
 done
 
-rm -rf "${DMG_PATH}" "${RW_DMG_PATH}" "${ROOT_DIR}/dist/LAN Scanner.dmg"
+rm -rf "${DMG_PATH}" "${RW_DMG_PATH}" "${ROOT_DIR}/dist/LAN Explorer.dmg"
 
 hdiutil create \
   -volname "${VOLUME_NAME}" \

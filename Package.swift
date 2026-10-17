@@ -3,16 +3,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "LANScanner",
+    name: "LANExplorer",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "LANScanner", targets: ["LANScanner"])
+        .executable(name: "LANExplorer", targets: ["LANExplorer"])
     ],
     targets: [
         .executableTarget(
-            name: "LANScanner",
+            name: "LANExplorer",
             resources: [
                 .process("../../Resources")
             ]

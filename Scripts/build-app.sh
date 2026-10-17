@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-APP_NAME="LAN Scanner"
-EXECUTABLE_NAME="LANScanner"
+APP_NAME="LAN Explorer"
+EXECUTABLE_NAME="LANExplorer"
 APP_DIR="${ROOT_DIR}/dist/${APP_NAME}.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
@@ -29,11 +29,11 @@ mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 
 cp "${BUILD_DIR}/${EXECUTABLE_NAME}" "${MACOS_DIR}/${EXECUTABLE_NAME}"
 cp "${ROOT_DIR}/Resources/Info.plist" "${CONTENTS_DIR}/Info.plist"
-if [[ -f "${ROOT_DIR}/Resources/LANScannerIcon.icns" ]]; then
-  cp "${ROOT_DIR}/Resources/LANScannerIcon.icns" "${RESOURCES_DIR}/LANScannerIcon.icns"
+if [[ -f "${ROOT_DIR}/Resources/LANExplorerIcon.icns" ]]; then
+  cp "${ROOT_DIR}/Resources/LANExplorerIcon.icns" "${RESOURCES_DIR}/LANExplorerIcon.icns"
 fi
-if [[ -f "${ROOT_DIR}/Resources/LANScannerIcon.svg" ]]; then
-  cp "${ROOT_DIR}/Resources/LANScannerIcon.svg" "${RESOURCES_DIR}/LANScannerIcon.svg"
+if [[ -f "${ROOT_DIR}/Resources/LANExplorerIcon.svg" ]]; then
+  cp "${ROOT_DIR}/Resources/LANExplorerIcon.svg" "${RESOURCES_DIR}/LANExplorerIcon.svg"
 fi
 if [[ -f "${ROOT_DIR}/Resources/GhostIcon.icns" ]]; then
   cp "${ROOT_DIR}/Resources/GhostIcon.icns" "${RESOURCES_DIR}/GhostIcon.icns"

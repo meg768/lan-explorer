@@ -1,4 +1,4 @@
-# LAN Scanner
+# LAN Explorer
 
 A small native macOS app for scanning the local LAN and spotting devices such as Raspberry Pi, Homebridge, MQTT brokers, Home Assistant, and Node-RED.
 
@@ -15,7 +15,17 @@ A small native macOS app for scanning the local LAN and spotting devices such as
 - Automatically scans again after a 30-second pause; preserves selection, filtering, and sorting.
 - Follows the system light/dark appearance. Use Command-R to scan and the toolbar details button to show/hide device information; the table remains visible.
 
+## Application identity
+
+LAN Explorer is a separate app with bundle identifier `se.egelberg.lan-explorer`.
+It does not migrate preferences from or replace LAN Scanner.
+
 ## Build
+
+Open `Package.swift` in Xcode and select the generated `LANExplorer` scheme,
+or build from the command line. The package, executable product, target, and
+Swift module are all named `LANExplorer`; no separate Xcode project is required.
+
 
 ```bash
 swift build
@@ -26,13 +36,13 @@ Scripts/build-dmg.sh
 The app bundle is created at:
 
 ```text
-dist/LAN Scanner.app
+dist/LAN Explorer.app
 ```
 
 The DMG installer is created at:
 
 ```text
-dist/lan-scanner.dmg
+dist/lan-explorer.dmg
 ```
 
 ## Distribution

@@ -4,7 +4,7 @@ import Combine
 @MainActor
 final class ScannerStore: ObservableObject {
     @Published var devices: [NetworkDevice] = []
-    @Published var localNetwork = LANScanner.localNetwork()
+    @Published var localNetwork = NetworkScanner.localNetwork()
     @Published var status: ScanStatus = .idle
     @Published var isScanning = false
     @Published var isBusy = false
@@ -12,12 +12,12 @@ final class ScannerStore: ObservableObject {
     @Published private(set) var inspections: [String: DeviceInspection] = [:]
     @Published private(set) var inspectingDeviceIDs: Set<String> = []
 
-    private let scanner = LANScanner()
+    private let scanner = NetworkScanner()
     private var autoScanTask: Task<Void, Never>?
     private let autoScanIntervalSeconds = 30.0
 
     func refreshLocalNetwork() {
-        localNetwork = LANScanner.localNetwork()
+        localNetwork = NetworkScanner.localNetwork()
     }
 
     func scan() {
