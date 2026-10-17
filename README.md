@@ -10,8 +10,10 @@ A small native macOS app for scanning the local LAN and spotting devices such as
 - Shows hostname, IP, MAC/vendor, response time, and last seen time.
 - Detects common services on ports `22`, `80`, `443`, `1883`, `8581`, `1880`, and `8123`.
 - Highlights likely Raspberry Pi devices by hostname, MAC prefix, or vendor.
-- Supports light/dark with `fn+F6`.
-- Supports hard/grass/clay themes with `fn+F3`.
+- Native macOS table with Address, Name, Vendor, Device Type and Last Seen columns, keyboard selection, sortable/resizable columns, and toolbar search.
+- Always-visible native device table and optional device details with independent navigation, including port, HTTP, and passwordless SSH information. A resizable content divider leaves the window toolbar continuous.
+- Automatically scans again after a 30-second pause; preserves selection, filtering, and sorting.
+- Follows the system light/dark appearance. Use Command-R to scan and the toolbar details button to show/hide device information; the table remains visible.
 
 ## Build
 

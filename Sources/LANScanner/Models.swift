@@ -163,3 +163,15 @@ enum ScanStatus: Equatable {
         }
     }
 }
+
+extension NetworkDevice {
+    var deviceType: String { LANScanner.deviceHints(for: self).joined(separator: ", ") }
+}
+
+extension DateFormatter {
+    static let scannerTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
+}

@@ -4,18 +4,13 @@ import SwiftUI
 @main
 struct LANScannerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var appearance = AppearanceSettings()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(appearance)
-                .preferredColorScheme(appearance.preferredColorScheme)
         }
+        .defaultSize(width: 1000, height: 650)
         .windowStyle(.titleBar)
-        .commands {
-            SidebarCommands()
-        }
     }
 }
 

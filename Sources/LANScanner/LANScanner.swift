@@ -607,7 +607,7 @@ actor LANScanner {
         }
     }
 
-    private static func deviceHints(for device: NetworkDevice) -> [String] {
+    static func deviceHints(for device: NetworkDevice) -> [String] {
         let haystack = [
             device.hostname,
             device.dnsName,
