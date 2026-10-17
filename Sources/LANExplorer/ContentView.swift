@@ -5,7 +5,6 @@ struct ContentView: View {
     @StateObject private var store = ScannerStore()
     @State private var searchText = ""
     @State private var showDetails = true
-    @State private var detailPath: [DetailPage] = []
     @State private var selectedDeviceID: NetworkDevice.ID?
     @State private var sortOrder = [KeyPathComparator(\NetworkDevice.displayName, comparator: .localizedStandard)]
 
@@ -59,11 +58,7 @@ struct ContentView: View {
                     .help(device.deviceType.isEmpty ? "Unknown device type" : device.deviceType)
             }
             .width(min: 140, ideal: 220)
-            TableColumn("Last Seen", value: \.lastSeen) { device in
-                Text(device.lastSeen, format: .dateTime.hour().minute().second())
-                    .monospacedDigit()
-            }
-            .width(min: 85, ideal: 100)
+
         }
     }
 
@@ -114,7 +109,6 @@ struct ContentView: View {
             .background(.bar)
         }
         .onChange(of: selectedDeviceID) { _, _ in
-            detailPath.removeAll()
             if let selectedDevice { store.inspect(selectedDevice) }
         }
         .onAppear { store.startAutoScan() }
@@ -127,7 +121,6 @@ struct ContentView: View {
                 .searchable(text: $searchText, placement: .toolbar, prompt: "Filter devices")
         } details: {
             DeviceDetails(
-                path: $detailPath,
                 device: selectedDevice,
                 inspection: selectedDeviceID.flatMap { store.inspections[$0] },
                 isInspecting: selectedDeviceID.map { store.inspectingDeviceIDs.contains($0) } ?? false
@@ -203,14 +196,7 @@ private struct DeviceWorkspace<TableContent: View, Details: View>: View {
     }
 }
 
-private enum DetailPage: Hashable {
-    case services
-    case system
-    case finding(String)
-}
-
 private struct DeviceDetails: View {
-    @Binding var path: [DetailPage]
     let device: NetworkDevice?
     let inspection: DeviceInspection?
     let isInspecting: Bool
@@ -222,111 +208,71 @@ private struct DeviceDetails: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
-            Group {
-                if let device {
-                    Form {
-                        Section(device.displayName) {
-                            LabeledContent("IP address", value: device.ipAddress)
-                            LabeledContent("MAC address", value: device.macAddress ?? "Unknown")
-                            LabeledContent("Vendor", value: device.vendor ?? "Unknown")
-                            if let dnsName = device.dnsName {
-                                LabeledContent("DNS name", value: dnsName)
-                            }
-                        }
-                        Section("Activity") {
-                            LabeledContent("Ping", value: device.pingText)
-                            LabeledContent("Last seen") {
-                                Text(device.lastSeen, format: .dateTime.hour().minute().second())
-                            }
-                        }
-                        if let inspection {
-                            if !inspection.likelyTypes.isEmpty {
-                                Section("Device type") {
-                                    ForEach(inspection.likelyTypes, id: \.self) { Text($0) }
-                                }
-                            }
-                            Section("Explore") {
-                                NavigationLink(value: DetailPage.services) {
-                                    LabeledContent {
-                                        Text(inspection.openServices.count, format: .number)
-                                    } label: {
-                                        Label("Services", systemImage: "network")
-                                    }
-                                }
-                                NavigationLink(value: DetailPage.system) {
-                                    LabeledContent {
-                                        Text(findings.count, format: .number)
-                                    } label: {
-                                        Label("System information", systemImage: "desktopcomputer")
-                                    }
-                                }
-                            }
-                            if !inspection.notes.isEmpty {
-                                Section("Notes") {
-                                    ForEach(inspection.notes, id: \.self) { Text($0) }
-                                }
-                            }
-                        } else if isInspecting {
-                            Section {
-                                HStack {
-                                    ProgressView().controlSize(.small)
-                                    Text("Inspecting device…").foregroundStyle(.secondary)
-                                }
-                                .accessibilityElement(children: .combine)
-                            }
+        Group {
+            if let device {
+                Form {
+                    Section(device.displayName) {
+                        LabeledContent("IP address", value: device.ipAddress)
+                        LabeledContent("MAC address", value: device.macAddress ?? "Unknown")
+                        LabeledContent("Vendor", value: device.vendor ?? "Unknown")
+                        if let dnsName = device.dnsName {
+                            LabeledContent("DNS name", value: dnsName)
                         }
                     }
-                    .formStyle(.grouped)
-                } else {
-                    ContentUnavailableView("Select a Device", systemImage: "network",
-                        description: Text("Select a device to explore its services and system information."))
-                }
-            }
-            .navigationDestination(for: DetailPage.self) { page in
-                switch page {
-                case .services:
-                    findingsList(inspection?.openServices ?? [], title: "Services")
-                case .system:
-                    findingsList(findings, title: "System information")
-                case .finding(let id):
-                    if let item = ((inspection?.openServices ?? []) + findings).first(where: { $0.id == id }) {
-                        Form {
-                            Section(item.name) {
-                                if let port = item.port {
-                                    LabeledContent("Port", value: String(port))
-                                }
-                                Text(item.detail)
-                                if let progress = item.progress {
-                                    ProgressView(value: progress)
+                    Section("Activity") {
+                        LabeledContent("Ping", value: device.pingText)
+                        LabeledContent("Last seen") {
+                            Text(device.lastSeen, format: .dateTime.hour().minute().second())
+                        }
+                    }
+                    if let inspection {
+                        if !inspection.likelyTypes.isEmpty {
+                            Section("Device type") {
+                                ForEach(inspection.likelyTypes, id: \.self) { Text($0) }
+                            }
+                        }
+                        Section("Services") {
+                            if inspection.openServices.isEmpty {
+                                Text("No services found").foregroundStyle(.secondary)
+                            } else {
+                                ForEach(inspection.openServices) { item in
+                                    InspectionRow(item: item)
                                 }
                             }
                         }
-                        .formStyle(.grouped)
+                        Section("System information") {
+                            if findings.isEmpty {
+                                Text("No system information found").foregroundStyle(.secondary)
+                            } else {
+                                ForEach(findings) { item in
+                                    InspectionRow(item: item)
+                                }
+                            }
+                        }
+                        if !inspection.notes.isEmpty {
+                            Section("Notes") {
+                                ForEach(inspection.notes, id: \.self) { Text($0) }
+                            }
+                        }
+                    } else if isInspecting {
+                        Section {
+                            HStack {
+                                ProgressView().controlSize(.small)
+                                Text("Inspecting device…").foregroundStyle(.secondary)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
                     }
                 }
+                .formStyle(.grouped)
+            } else {
+                ContentUnavailableView("Select a Device", systemImage: "network",
+                    description: Text("Select a device to explore its services and system information."))
             }
         }
         .textSelection(.enabled)
     }
 
-    private func findingsList(_ items: [DeviceInspectionItem], title: String) -> some View {
-        List {
-            Section(title) {
-                ForEach(items) { item in
-                    NavigationLink(value: DetailPage.finding(item.id)) {
-                        InspectionRow(item: item)
-                    }
-                }
-            }
-        }
-        .overlay {
-            if items.isEmpty {
-                ContentUnavailableView("No findings", systemImage: "magnifyingglass",
-                    description: Text("No additional information was found for this device."))
-            }
-        }
-    }
 }
 
 private struct InspectionRow: View {
@@ -338,7 +284,7 @@ private struct InspectionRow: View {
             Text(item.port.map { "Port \($0) · \(item.detail)" } ?? item.detail)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             if let progress = item.progress {
                 ProgressView(value: progress)
             }
