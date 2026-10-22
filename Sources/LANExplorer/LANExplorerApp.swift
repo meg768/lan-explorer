@@ -11,6 +11,19 @@ struct LANExplorerApp: App {
         }
         .defaultSize(width: 1000, height: 650)
         .windowStyle(.titleBar)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About LAN Explorer") {
+                    let info = Bundle.main.infoDictionary ?? [:]
+                    let version = info["CFBundleShortVersionString"] as? String ?? "1.0"
+                    let timestamp = info["ExplorerBuildTimestamp"] as? String ?? ""
+                    NSApp.orderFrontStandardAboutPanel(options: [
+                        .applicationVersion: "Version \(version)\nBuild \(timestamp)",
+                        .version: "",
+                    ])
+                }
+            }
+        }
     }
 }
 

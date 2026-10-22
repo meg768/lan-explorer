@@ -27,6 +27,16 @@ actor NetworkScanner {
             throw ScannerError.noLocalNetwork
         }
 
+        // Access to the gateway can work even when other LAN destinations are
+        // prohibited. Check two destinations other than this Mac.
+        let accessCheckHosts = (2...4).map { "\(network.prefix).\($0)" }
+            .filter { $0 != network.address }.prefix(2)
+        for host in accessCheckHosts {
+            if await Self.localNetworkAccessDenied(host: host) {
+                throw ScannerError.localNetworkDenied
+            }
+        }
+
         let hosts = (1...254).map { "\(network.prefix).\($0)" }
         let hostSet = Set(hosts)
         let total = hosts.count
@@ -95,6 +105,9 @@ actor NetworkScanner {
     }
 
     func inspect(device: NetworkDevice) async -> DeviceInspection {
+        if await Self.localNetworkAccessDenied(host: device.ipAddress) {
+            return DeviceInspection(likelyTypes: [], openServices: [], systemFindings: [], notes: [], accessDenied: true)
+        }
         async let openServices = inspectOpenServices(for: device.ipAddress)
         let likelyTypes = Self.deviceHints(for: device)
         let services = await openServices
@@ -575,6 +588,42 @@ actor NetworkScanner {
         ].contains { lowercased.contains($0) }
     }
 
+    private static func localNetworkAccessDenied(host: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            // A closed port is fine: this checks macOS access to the destination,
+            // not whether it offers a particular service.
+            let connection = NWConnection(host: NWEndpoint.Host(host), port: 9, using: .tcp)
+            let queue = DispatchQueue.global(qos: .utility)
+            let resumer = ConnectionProbeResumer(continuation: continuation)
+            connection.stateUpdateHandler = { state in
+                if connection.currentPath?.unsatisfiedReason == .localNetworkDenied {
+                    resumer.finish(true, connection: connection)
+                } else {
+                    switch state {
+                    case .waiting(let error), .failed(let error):
+                        let unavailable: Bool
+                        switch error {
+                        case .posix(let code):
+                            unavailable = [.ENETDOWN, .ENETUNREACH, .EACCES, .EPERM].contains(code)
+                        case .dns:
+                            unavailable = true
+                        default:
+                            unavailable = false
+                        }
+                        resumer.finish(unavailable, connection: connection)
+                    case .ready, .cancelled:
+                        resumer.finish(false, connection: connection)
+                    default: break
+                    }
+                }
+            }
+            connection.start(queue: queue)
+            queue.asyncAfter(deadline: .now() + 1) {
+                resumer.finish(connection.currentPath?.unsatisfiedReason == .localNetworkDenied, connection: connection)
+            }
+        }
+    }
+
     private static func canConnect(host: String, port: Int) async -> Bool {
         await withCheckedContinuation { continuation in
             let connection = NWConnection(
@@ -702,9 +751,9 @@ actor NetworkScanner {
             if systemFindingNames.contains("SSH passwordless login") {
                 notes.append("Raspberry Pi SSH inspection succeeded. Installed runtimes and services above came from the device itself.")
             } else if serviceNames.contains("SSH") {
-                notes.append("SSH is available. Configure passwordless access for pi or root to include system details.")
+                notes.append("SSH port is open.")
             } else {
-                notes.append("Raspberry Pi candidate, but SSH is not open on port 22.")
+                notes.append("Raspberry Pi candidate; SSH port did not respond.")
             }
         }
 
@@ -733,7 +782,7 @@ actor NetworkScanner {
         }
 
         if isVacuumCandidate, !serviceNames.contains("Miio / robot vacuum"), !serviceNames.contains("Robot vacuum cloud bridge") {
-            notes.append("Roborock/vacuum hostname detected. These devices often expose little or nothing over TCP while idle; more detail usually needs the vendor token/cloud integration or Home Assistant.")
+            notes.append("Roborock/vacuum hostname detected. These devices often expose little or nothing over TCP while idle.")
         }
 
         let appleTVServices = ["RAOP / AirTunes", "Apple TV MediaRemote", "Apple TV Companion", "AirPlay", "AirPlay control", "AirPlay alt", "HomeKit accessory"]
@@ -797,7 +846,7 @@ actor NetworkScanner {
         }
 
         if isSamsungDevice, !hasSamsungTVService {
-            notes.append("Samsung device found, but no Samsung TV local-control ports answered. It may be a phone/tablet, or a TV in standby/offline mode. If it is the TV, turn it on and inspect again.")
+            notes.append("Samsung device found, but no Samsung TV local-control ports answered. It may be a phone/tablet, or a TV in standby/offline mode.")
         }
 
         if serviceNames.contains("IPP / Printer") || serviceNames.contains("Printer RAW") {
@@ -1218,9 +1267,12 @@ private final class CommandResumer: @unchecked Sendable {
 
 enum ScannerError: LocalizedError {
     case noLocalNetwork
+    case localNetworkDenied
 
     var errorDescription: String? {
         switch self {
+        case .localNetworkDenied:
+            return "Local network access is unavailable."
         case .noLocalNetwork:
             return "No private IPv4 network found."
         }

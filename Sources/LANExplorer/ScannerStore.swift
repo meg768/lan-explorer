@@ -54,7 +54,8 @@ final class ScannerStore: ObservableObject {
     }
 
     func inspect(_ device: NetworkDevice) {
-        guard inspections[device.id] == nil, !inspectingDeviceIDs.contains(device.id) else { return }
+        guard inspections[device.id] == nil || inspections[device.id]?.accessDenied == true else { return }
+        guard !inspectingDeviceIDs.contains(device.id) else { return }
         inspectingDeviceIDs.insert(device.id)
         Task {
             inspections[device.id] = await scanner.inspect(device: device)

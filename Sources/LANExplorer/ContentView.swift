@@ -4,7 +4,6 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var store = ScannerStore()
     @State private var searchText = ""
-    @State private var showDetails = true
     @State private var selectedDeviceID: NetworkDevice.ID?
     @State private var sortOrder = [KeyPathComparator(\NetworkDevice.displayName, comparator: .localizedStandard)]
 
@@ -79,14 +78,7 @@ struct ContentView: View {
                 .disabled(store.isBusy)
                 .help("Scan network (⌘R)")
             }
-            ToolbarItem {
-                Button {
-                    showDetails.toggle()
-                } label: {
-                    Label(showDetails ? "Hide Details" : "Show Details", systemImage: "sidebar.right")
-                }
-                .help(showDetails ? "Hide device details" : "Show device details")
-            }
+
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
@@ -116,7 +108,7 @@ struct ContentView: View {
     }
 
     private var workspace: some View {
-        DeviceWorkspace(showDetails: showDetails) {
+        DeviceWorkspace() {
             deviceTable
                 .searchable(text: $searchText, placement: .toolbar, prompt: "Filter devices")
         } details: {
@@ -131,13 +123,12 @@ struct ContentView: View {
 
 // Only the content is divided; the window toolbar remains a single system toolbar.
 private struct DeviceWorkspace<TableContent: View, Details: View>: View {
-    let showDetails: Bool
     @ViewBuilder let table: TableContent
     @ViewBuilder let details: Details
     @State private var preferredDetailsWidth: CGFloat = 340
 
-    private let minimumTableWidth: CGFloat = 300
-    private let minimumDetailsWidth: CGFloat = 280
+    private let minimumTableWidth: CGFloat = 520
+    private let minimumDetailsWidth: CGFloat = 300
     private let dividerWidth: CGFloat = 10
 
     var body: some View {
@@ -147,48 +138,46 @@ private struct DeviceWorkspace<TableContent: View, Details: View>: View {
 
             HStack(spacing: 0) {
                 table
-                    .frame(width: showDetails ? width - detailsWidth - dividerWidth : width)
+                    .frame(width: width - detailsWidth - dividerWidth)
                     .frame(maxHeight: .infinity)
-                if showDetails {
-                    ZStack {
-                        Rectangle().fill(Color.clear)
-                        HStack(spacing: 0) { Divider() }
-                    }
-                        .frame(width: dividerWidth)
-                        .frame(maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            (hovering ? NSCursor.resizeLeftRight : NSCursor.arrow).set()
-                        }
-                        .gesture(
-                            DragGesture(minimumDistance: 0, coordinateSpace: .named("DeviceWorkspace"))
-                                .onChanged { value in
-                                    preferredDetailsWidth = clampedDetailsWidth(
-                                        width - value.location.x - dividerWidth / 2,
-                                        availableWidth: width
-                                    )
-                                }
-                        )
-                        .accessibilityLabel("Device details width")
-                        .accessibilityValue("\(Int(detailsWidth)) points")
-                        .accessibilityAdjustableAction { direction in
-                            switch direction {
-                            case .increment:
-                                preferredDetailsWidth = clampedDetailsWidth(detailsWidth + 20, availableWidth: width)
-                            case .decrement:
-                                preferredDetailsWidth = clampedDetailsWidth(detailsWidth - 20, availableWidth: width)
-                            @unknown default:
-                                break
-                            }
-                        }
-                    details
-                        .frame(width: detailsWidth)
-                        .frame(maxHeight: .infinity)
+                ZStack {
+                    Rectangle().fill(Color.clear)
+                    HStack(spacing: 0) { Divider() }
                 }
+                    .frame(width: dividerWidth)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        (hovering ? NSCursor.resizeLeftRight : NSCursor.arrow).set()
+                    }
+                    .gesture(
+                        DragGesture(minimumDistance: 0, coordinateSpace: .named("DeviceWorkspace"))
+                            .onChanged { value in
+                                preferredDetailsWidth = clampedDetailsWidth(
+                                    width - value.location.x - dividerWidth / 2,
+                                    availableWidth: width
+                                )
+                            }
+                    )
+                    .accessibilityLabel("Device details width")
+                    .accessibilityValue("\(Int(detailsWidth)) points")
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment:
+                            preferredDetailsWidth = clampedDetailsWidth(detailsWidth + 20, availableWidth: width)
+                        case .decrement:
+                            preferredDetailsWidth = clampedDetailsWidth(detailsWidth - 20, availableWidth: width)
+                        @unknown default:
+                            break
+                        }
+                    }
+                details
+                    .frame(width: detailsWidth)
+                    .frame(maxHeight: .infinity)
             }
             .coordinateSpace(name: "DeviceWorkspace")
         }
-        .frame(minWidth: showDetails ? minimumTableWidth + minimumDetailsWidth + dividerWidth : minimumTableWidth)
+        .frame(minWidth: minimumTableWidth + minimumDetailsWidth + dividerWidth)
     }
 
     private func clampedDetailsWidth(_ width: CGFloat, availableWidth: CGFloat) -> CGFloat {
@@ -226,32 +215,39 @@ private struct DeviceDetails: View {
                         }
                     }
                     if let inspection {
-                        if !inspection.likelyTypes.isEmpty {
-                            Section("Device type") {
-                                ForEach(inspection.likelyTypes, id: \.self) { Text($0) }
+                        if inspection.accessDenied {
+                            Section {
+                                Text(ScannerError.localNetworkDenied.localizedDescription)
+                                    .foregroundStyle(.secondary)
                             }
-                        }
-                        Section("Services") {
-                            if inspection.openServices.isEmpty {
-                                Text("No services found").foregroundStyle(.secondary)
-                            } else {
-                                ForEach(inspection.openServices) { item in
-                                    InspectionRow(item: item)
+                        } else {
+                            if !inspection.likelyTypes.isEmpty {
+                                Section("Device type") {
+                                    ForEach(inspection.likelyTypes, id: \.self) { Text($0) }
                                 }
                             }
-                        }
-                        Section("System information") {
-                            if findings.isEmpty {
-                                Text("No system information found").foregroundStyle(.secondary)
-                            } else {
-                                ForEach(findings) { item in
-                                    InspectionRow(item: item)
+                            Section("Services") {
+                                if inspection.openServices.isEmpty {
+                                    Text("No services found").foregroundStyle(.secondary)
+                                } else {
+                                    ForEach(inspection.openServices) { item in
+                                        InspectionRow(item: item)
+                                    }
                                 }
                             }
-                        }
-                        if !inspection.notes.isEmpty {
-                            Section("Notes") {
-                                ForEach(inspection.notes, id: \.self) { Text($0) }
+                            Section("System information") {
+                                if findings.isEmpty {
+                                    Text("No system information found").foregroundStyle(.secondary)
+                                } else {
+                                    ForEach(findings) { item in
+                                        InspectionRow(item: item)
+                                    }
+                                }
+                            }
+                            if !inspection.notes.isEmpty {
+                                Section("Notes") {
+                                    ForEach(inspection.notes, id: \.self) { Text($0) }
+                                }
                             }
                         }
                     } else if isInspecting {

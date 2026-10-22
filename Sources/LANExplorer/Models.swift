@@ -94,6 +94,7 @@ struct DeviceInspection: Hashable {
     let openServices: [DeviceInspectionItem]
     let systemFindings: [DeviceInspectionItem]
     let notes: [String]
+    var accessDenied = false
 
     var hasFindings: Bool {
         !likelyTypes.isEmpty || !openServices.isEmpty || !systemFindings.isEmpty || !notes.isEmpty
