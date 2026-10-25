@@ -1,0 +1,25 @@
+---
+title: Support
+---
+
+# Support
+
+Start with [Getting Started](getting-started.html) or [Troubleshooting](troubleshooting.html) for help scanning your network and configuring SSH.
+
+## Ask a question or report a problem
+
+LAN Explorer is developed by Magnus Egelberg. Support is provided through [GitHub Issues](https://github.com/meg768/lan-explorer/issues). Search existing issues first, or [open a new issue](https://github.com/meg768/lan-explorer/issues/new). A GitHub account is required to post.
+
+Please include:
+
+- The Version and Build shown in **LAN Explorer → About LAN Explorer**.
+- Your macOS version.
+- What you did, what you expected, and what happened.
+- Whether the problem affects scanning, device inspection, or SSH.
+- The exact error message or a screenshot with sensitive details hidden, if useful.
+
+GitHub Issues are public. Do not post private SSH keys, passphrases, passwords, or unredacted network inventories. Hide personal hostnames, addresses, usernames, and other information you do not want to publish.
+
+For questions about data handling, see the [Privacy Policy](privacy.html). Do not include private information in a public issue.
+
+[Back to LAN Explorer Help](index.html)
