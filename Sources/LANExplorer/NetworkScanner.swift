@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import dnssd
 
 actor NetworkScanner {
     private let maxConcurrentPings = 32
@@ -69,7 +70,7 @@ actor NetworkScanner {
             return nextDevice
         }
 
-        return await resolveNames(for: timedDevices).sorted {
+        return await resolveNames(for: timedDevices, interfaceIndex: if_nametoindex(network.interfaceName)).sorted {
             Self.ipSortKey($0.ipAddress).lexicographicallyPrecedes(Self.ipSortKey($1.ipAddress))
         }
     }
@@ -1019,7 +1020,7 @@ actor NetworkScanner {
         return Array(devicesByIP.values)
     }
 
-    private func resolveNames(for devices: [NetworkDevice]) async -> [NetworkDevice] {
+    private func resolveNames(for devices: [NetworkDevice], interfaceIndex: UInt32) async -> [NetworkDevice] {
         var namedDevices: [NetworkDevice] = []
 
         for chunk in devices.chunked(into: 16) {
@@ -1027,8 +1028,11 @@ actor NetworkScanner {
                 for device in chunk {
                     group.addTask {
                         var nextDevice = device
-                        nextDevice.dnsName = await Self.reverseDNSName(for: device.ipAddress)
-                        nextDevice.hostname = Self.shortHostname(from: nextDevice.dnsName)
+                        async let bonjourName = BonjourNameQuery.lookup(host: device.ipAddress, interfaceIndex: interfaceIndex)
+                        let dnsName = await Self.reverseDNSName(for: device.ipAddress)
+                        let localName = await bonjourName
+                        nextDevice.dnsName = dnsName ?? localName
+                        nextDevice.hostname = Self.shortHostname(from: localName ?? dnsName)
                         return nextDevice
                     }
                 }
@@ -1195,6 +1199,86 @@ actor NetworkScanner {
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         return CommandResult(exitCode: process.terminationStatus, output: String(data: data, encoding: .utf8) ?? "")
+    }
+}
+
+// Query the device itself over mDNS: router DNS may give several Macs the same
+// generic name. Keep callbacks, timeout and cleanup on one serial queue.
+private final class BonjourNameQuery: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "se.egelberg.lan-explorer.bonjour")
+    private var reference: DNSServiceRef?
+    private var continuation: CheckedContinuation<String?, Never>?
+
+    private init(continuation: CheckedContinuation<String?, Never>) {
+        self.continuation = continuation
+    }
+
+    static func lookup(host: String, interfaceIndex: UInt32) async -> String? {
+        await withCheckedContinuation { continuation in
+            let query = BonjourNameQuery(continuation: continuation)
+            query.queue.async {
+                query.start(host: host, interfaceIndex: interfaceIndex)
+            }
+        }
+    }
+
+    private func start(host: String, interfaceIndex: UInt32) {
+        let reverseName = host.split(separator: ".").reversed().joined(separator: ".") + ".in-addr.arpa."
+        let error = DNSServiceQueryRecord(
+            &reference, kDNSServiceFlagsForceMulticast, interfaceIndex, reverseName,
+            UInt16(kDNSServiceType_PTR), UInt16(kDNSServiceClass_IN),
+            { _, flags, _, error, _, _, _, length, data, _, context in
+                guard let context else { return }
+                let query = Unmanaged<BonjourNameQuery>.fromOpaque(context).takeUnretainedValue()
+                if error != kDNSServiceErr_NoError {
+                    query.queue.async { query.finish(nil) }
+                } else if flags & kDNSServiceFlagsAdd != 0, let data,
+                          let name = BonjourNameQuery.hostname(from: UnsafeRawBufferPointer(start: data, count: Int(length))) {
+                    query.queue.async { query.finish(name) }
+                }
+            },
+            Unmanaged.passUnretained(self).toOpaque()
+        )
+
+        guard error == kDNSServiceErr_NoError, let reference,
+              DNSServiceSetDispatchQueue(reference, queue) == kDNSServiceErr_NoError else {
+            finish(nil)
+            return
+        }
+
+        queue.asyncAfter(deadline: .now() + 1) {
+            self.finish(nil)
+        }
+    }
+
+    private func finish(_ name: String?) {
+        guard let continuation else { return }
+        self.continuation = nil
+        if let reference {
+            DNSServiceRefDeallocate(reference)
+            self.reference = nil
+        }
+        continuation.resume(returning: name)
+    }
+
+    private static func hostname(from bytes: UnsafeRawBufferPointer) -> String? {
+        var labels: [String] = []
+        var offset = 0
+        while offset < bytes.count {
+            let length = Int(bytes[offset])
+            offset += 1
+            if length == 0 {
+                let name = labels.joined(separator: ".")
+                return name.lowercased().hasSuffix(".local") ? name : nil
+            }
+            guard length <= 63, offset + length <= bytes.count,
+                  let label = String(bytes: bytes[offset..<(offset + length)], encoding: .utf8) else {
+                return nil
+            }
+            labels.append(label)
+            offset += length
+        }
+        return nil
     }
 }
 

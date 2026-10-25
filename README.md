@@ -7,6 +7,7 @@ A small native macOS app for scanning the local LAN and spotting devices such as
 - Detects the active private IPv4 network.
 - Scans the `/24` subnet with ping.
 - Reads MAC addresses from ARP when available.
+- Prefers Bonjour/mDNS hostnames, with router DNS as a fallback.
 - Shows hostname, IP, MAC/vendor, response time, and last seen time.
 - Detects common services on ports `22`, `80`, `443`, `1883`, `8581`, `1880`, and `8123`.
 - Highlights likely Raspberry Pi devices by hostname, MAC prefix, or vendor.
