@@ -24,6 +24,9 @@ struct LANExplorerApp: App {
                 }
             }
         }
+        Settings {
+            SSHSettingsView()
+        }
     }
 }
 

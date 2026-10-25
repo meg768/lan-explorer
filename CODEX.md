@@ -3,13 +3,13 @@
 ## Identity and repository
 
 - Repository: https://github.com/meg768/lan-explorer
-- Local path: `/Users/magnus/Documents/GitHub/lan-explorer`
+- Local path: `/Users/magnus/GitHub/lan-explorer`
 - App: **LAN Explorer**, bundle identifier `se.egelberg.lan-explorer`.
 - Swift package, executable and module: `LANExplorer`. Native Xcode target and shared scheme: `lan-explorer`.
 - Minimum platform: macOS 14; entry point: `Sources/LANExplorer/LANExplorerApp.swift`.
 - Open `lan-explorer.xcodeproj` in Xcode for the native macOS app target and shared `lan-explorer` scheme. The Swift package remains available for local CLI builds.
 - LAN Explorer is a separate application. Never modify or overwrite the original LAN Scanner project or `/Applications/LAN Scanner.app`, and do not migrate its preferences.
-- There are currently no explicit UserDefaults/AppStorage preferences. macOS-managed preferences and window state use the new app identity.
+- SSH usernames use app-local UserDefaults; the privacy manifest declares CA92.1. Private keys and optional passphrases are stored in the local Keychain, never in preferences or source files.
 
 ## Build and installation
 
@@ -17,7 +17,7 @@
 - `xcodebuild -project lan-explorer.xcodeproj -scheme lan-explorer -configuration Debug -destination 'platform=macOS' build` builds the native app.
 - Product > Archive, or `xcodebuild -project lan-explorer.xcodeproj -scheme lan-explorer -configuration Release -destination 'generic/platform=macOS' -archivePath /tmp/LANExplorer.xcarchive archive`, produces a native app archive.
 - Xcode uses the existing team `52A6FA9VB5`, original bundle identifier and version `1.0 (3)`. Icons are copied from the existing ICNS into `Xcode/Assets.xcassets`.
-- App Sandbox is disabled again on the user's instruction: sandboxing prevented existing SSH authentication and removed memory/disk/CPU information, which is core functionality. Preserve full SSH inspection. Do not re-enable sandbox or prepare another Store build until feature parity is demonstrated and the user approves that tradeoff. The previously uploaded sandboxed build is not the restored local version.
+- 2026-10-25: The user authorized sandbox adaptation for App Store distribution. App Sandbox is enabled. Global SSH settings import a user-selected key into the local Keychain, with optional passphrase and configurable usernames. OpenSSH uses temporary owner-only credential files inside the app container and a persistent app-owned known-hosts file. Preserve full SSH inspection. Verified sandbox SSH on 14 Raspberry Pi devices and Mac mini, including an encrypted key; pi-kato disk, memory and system information were verified in the GUI. The older uploaded build remains unchanged.
 - Distribution status and remaining steps are documented in `DISTRIBUTION.md`.
 - Install only as `/Applications/LAN Explorer.app`.
 - Finder/File Provider extended attributes can invalidate ad-hoc signing under Documents. If necessary, build/sign outside Documents, copy with `ditto --norsrc --noextattr`, and verify the final destination with `codesign --verify --deep --strict`.

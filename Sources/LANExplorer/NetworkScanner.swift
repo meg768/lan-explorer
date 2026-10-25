@@ -233,7 +233,10 @@ actor NetworkScanner {
     }
 
     private func inspectSSH(device: NetworkDevice) async -> [DeviceInspectionItem] {
-        let users = Self.sshUsers()
+        guard let credentials = try? SSHConfiguration.load(),
+              let session = try? SSHSession(credentials: credentials) else { return [] }
+        defer { withExtendedLifetime(session) {} }
+        let users = SSHConfiguration.usernames
         var findings: [DeviceInspectionItem] = []
 
         await withTaskGroup(of: [DeviceInspectionItem].self) { group in
@@ -241,8 +244,9 @@ actor NetworkScanner {
                 group.addTask {
                     let result = await Self.run(
                         "/usr/bin/ssh",
-                        arguments: Self.sshArguments(user: user, host: device.ipAddress),
-                        timeout: 20
+                        arguments: session.arguments(user: user, host: device.ipAddress) + [Self.sshInspectionScript],
+                        timeout: 20,
+                        environment: session.environment
                     )
 
                     guard result.exitCode == 0 else {
@@ -259,6 +263,30 @@ actor NetworkScanner {
         }
 
         return Self.deduplicatedFindings(findings)
+    }
+
+    func testSSH(host: String) async -> (succeeded: Bool, message: String) {
+        do {
+            guard let credentials = try SSHConfiguration.load() else {
+                return (false, "Choose and save an SSH key first.")
+            }
+            let session = try SSHSession(credentials: credentials)
+            defer { withExtendedLifetime(session) {} }
+            var errors: [String] = []
+            for user in SSHConfiguration.usernames {
+                let result = await Self.run("/usr/bin/ssh",
+                                            arguments: session.arguments(user: user, host: host) + ["hostname"],
+                                            timeout: 10, environment: session.environment)
+                if result.exitCode == 0 {
+                    let hostname = result.output.components(separatedBy: .newlines).last(where: { !$0.isEmpty }) ?? host
+                    return (true, "Connected as \(user) to \(hostname).")
+                }
+                errors.append(result.output.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            return (false, errors.last ?? "Add at least one SSH username.")
+        } catch {
+            return (false, error.localizedDescription)
+        }
     }
 
     private static func deduplicatedFindings(_ findings: [DeviceInspectionItem]) -> [DeviceInspectionItem] {
@@ -381,23 +409,6 @@ actor NetworkScanner {
             .replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func sshUsers() -> [String] {
-        ["pi", "root"]
-    }
-
-    private static func sshArguments(user: String, host: String) -> [String] {
-        [
-            "-o", "BatchMode=yes",
-            "-o", "PreferredAuthentications=publickey",
-            "-o", "PasswordAuthentication=no",
-            "-o", "KbdInteractiveAuthentication=no",
-            "-o", "ConnectTimeout=4",
-            "-o", "StrictHostKeyChecking=accept-new",
-            "\(user)@\(host)",
-            sshInspectionScript
-        ]
     }
 
     private static let sshInspectionScript = """
@@ -1142,11 +1153,13 @@ actor NetworkScanner {
         ip.split(separator: ".").map { Int($0) ?? 0 }
     }
 
-    private static func run(_ path: String, arguments: [String], timeout: TimeInterval) async -> CommandResult {
+    private static func run(_ path: String, arguments: [String], timeout: TimeInterval,
+                            environment: [String: String] = [:]) async -> CommandResult {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
+        process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
         process.standardOutput = pipe
         process.standardError = pipe
 

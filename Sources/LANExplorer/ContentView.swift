@@ -71,6 +71,12 @@ struct ContentView: View {
         .navigationSubtitle(store.localNetwork?.displayName ?? "No local IPv4 network")
         .toolbar {
             ToolbarItem {
+                SettingsLink {
+                    Label("SSH Settings", systemImage: "key")
+                }
+                .help("Configure SSH access for all devices")
+            }
+            ToolbarItem {
                 Button(action: store.scan) {
                     Label("Scan Network", systemImage: "arrow.clockwise")
                 }
@@ -101,6 +107,10 @@ struct ContentView: View {
             .background(.bar)
         }
         .onChange(of: selectedDeviceID) { _, _ in
+            if let selectedDevice { store.inspect(selectedDevice) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sshConfigurationChanged)) { _ in
+            store.resetInspections()
             if let selectedDevice { store.inspect(selectedDevice) }
         }
         .onAppear { store.startAutoScan() }

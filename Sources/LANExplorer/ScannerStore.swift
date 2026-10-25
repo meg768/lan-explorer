@@ -15,6 +15,7 @@ final class ScannerStore: ObservableObject {
     private let scanner = NetworkScanner()
     private var autoScanTask: Task<Void, Never>?
     private let autoScanIntervalSeconds = 30.0
+    private var inspectionGeneration = 0
 
     func refreshLocalNetwork() {
         localNetwork = NetworkScanner.localNetwork()
@@ -57,10 +58,21 @@ final class ScannerStore: ObservableObject {
         guard inspections[device.id] == nil || inspections[device.id]?.accessDenied == true else { return }
         guard !inspectingDeviceIDs.contains(device.id) else { return }
         inspectingDeviceIDs.insert(device.id)
+        let generation = inspectionGeneration
         Task {
-            inspections[device.id] = await scanner.inspect(device: device)
+            let result = await scanner.inspect(device: device)
             inspectingDeviceIDs.remove(device.id)
+            guard generation == inspectionGeneration else {
+                inspect(device)
+                return
+            }
+            inspections[device.id] = result
         }
+    }
+
+    func resetInspections() {
+        inspectionGeneration += 1
+        inspections.removeAll()
     }
 
     private func scanOnce() async {

@@ -14,8 +14,10 @@ let package = Package(
         .executableTarget(
             name: "LANExplorer",
             resources: [
+                .process("Resources"),
                 .process("../../Resources")
             ]
-        )
+        ),
+        .testTarget(name: "LANExplorerTests", dependencies: ["LANExplorer"])
     ]
 )

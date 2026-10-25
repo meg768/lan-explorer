@@ -42,9 +42,13 @@ Build and archive the application through Xcode. Export archives through Organiz
 
 ### Mac App Store distribution
 
-The current local Xcode build has App Sandbox disabled to preserve SSH inspection
-using the user's existing SSH configuration and keys. Memory, disk, CPU and other
-remote system details require successful SSH authentication. The sandboxed Store
-build lost that access and is not functionally equivalent to this local build.
-Do not use the previously uploaded build for release until this is resolved.
-See [DISTRIBUTION.md](DISTRIBUTION.md) for verification and history.
+App Sandbox is enabled. Configure SSH once in **LAN Explorer > Settings > SSH**:
+select a private key, enter usernames such as `pi, magnus`, save, and test a device.
+The app stores the key and optional passphrase in the local macOS Keychain. SSH
+uses an app-owned known-hosts file; changes to a previously trusted host key are
+rejected. Temporary key material is owner-only and removed after each inspection.
+The original `~/.ssh` files and SSH agent are not used by the Store configuration.
+
+The same saved key is reused across devices that already authorize it. Network
+and Bonjour discovery work without configuring SSH; detailed system information
+requires successful SSH authentication. See [DISTRIBUTION.md](DISTRIBUTION.md).

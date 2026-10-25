@@ -1,10 +1,27 @@
-# Current status — local functionality restored, Store work paused
+# Current status — sandbox SSH verified, build uploaded
 
-The user rejected the sandbox-induced loss of SSH system information.
-App Sandbox is disabled in Debug and Release again. This local build is not
-Mac App Store eligible in its current configuration. Existing uploaded build
-202610172235 is unchanged and must not be submitted as a feature-equivalent release.
-No review submission or publication has been performed by this agent.
+2026-10-25: The user authorized adapting SSH for App Sandbox and uploading a new
+build when functionality is verified. Version 1.0 (202610252119) was uploaded
+successfully at 21:23:27 Europe/Stockholm. Apple accepted the package and began
+processing; completion of processing has not yet been verified. Debug and Release now enable App Sandbox
+with network client/server and user-selected read-only file access.
+
+SSH is configured once in Settings: usernames plus an imported private key and
+optional passphrase, stored in the local Keychain. OpenSSH receives owner-only
+temporary credential files in the app container; the files are removed when each
+session ends. A separate app-owned known-hosts file preserves host-key checking.
+No access to the user's SSH agent or original ~/.ssh files is required at runtime.
+
+Verified in a signed sandbox build: network/Bonjour discovery (48 devices), SSH
+connection to 14 Raspberry Pi devices and Mac mini, encrypted-key authentication,
+and pi-kato disk, memory, temperature, installed software and process information.
+Five regression tests cover username validation, rejecting public/oversized keys,
+credential-file permissions and cleanup, and SSH host verification/isolation.
+UserDefaults usage is declared with privacy reason CA92.1.
+
+The original shared key was restored after the encrypted-key test, and its
+temporary encrypted test copy was deleted. No review submission or publication
+has been performed. The previous uploaded build is unchanged.
 
 # LAN Explorer distribution status — 2026-10-17
 
@@ -81,3 +98,24 @@ changes were needed. Runtime verification in the installed app: 50 devices;
 pi-kato passwordless SSH succeeded as pi; root disk 13G of 29G (45%),
 memory 889Mi of 7.9Gi (11%), CPU/memory process data, uptime, temperature,
 kernel and installed software appeared again. Previous Store archive untouched.
+
+## Sandbox upload — 2026-10-25
+
+- Archive: `/Users/magnus/Library/Developer/Xcode/Archives/2026-10-25/LANExplorer-1.0-202610252119.xcarchive`.
+- Universal arm64/x86_64 archive succeeded; strict signature verification passed.
+- App Store export succeeded using existing automatic provisioning. Package signed
+  by `3rd Party Mac Developer Installer: Magnus Egelberg (52A6FA9VB5)`.
+- Uploaded the same archive using App Store Connect distribution, with automatic
+  version/build management disabled. Apple's package and SPI analysis completed;
+  Xcode reported `Upload succeeded` and `Uploaded package is processing`.
+- Native archived app retained the imported key after restart. SSH pi-kato test
+  succeeded without reimport. Full pi-storage inspection displayed disk, memory,
+  temperature, software and process data. Network/Bonjour scan found 48 devices.
+- Installed the sandboxed archive's development-signed app as
+  `/Applications/LAN Explorer.app`. Prior local app backup is in the chat's
+  `work/LAN Explorer before App Store.app`; Git rollback point is tag
+  `2026-10-25-20-58` / commit `5cd75b1`.
+- No review submission or publication. App Store Connect's web session requires
+  login to verify subsequent TestFlight processing/review status.
+- Source changes for sandbox SSH are uncommitted; no new commit, tag or push was
+  performed as part of this work.
