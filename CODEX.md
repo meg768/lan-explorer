@@ -3,7 +3,7 @@
 ## Identity and repository
 
 - Repository: https://github.com/meg768/network-explorer
-- Local path: `/Users/magnus/GitHub/lan-explorer`
+- Local path: `/Users/magnus/GitHub/network-explorer`
 - App: **Network Explorer**, bundle identifier `se.egelberg.network-explorer`.
 - Swift package, executable and module: `NetworkExplorer`. Native Xcode target and shared scheme: `network-explorer`.
 - Minimum platform: macOS 14; entry point: `Sources/NetworkExplorer/NetworkExplorerApp.swift`.
@@ -70,8 +70,8 @@ Xcode project/scheme, Swift package/module, source/test folders, app executable,
 SSH service names, current documentation, and the approved new app icon.
 GitHub repository and origin remote were renamed to network-explorer on
 2026-10-26. The help URL is https://meg768.github.io/network-explorer/ and current
-repository/support links use the new name. The local checkout directory remains
-/Users/magnus/GitHub/lan-explorer; it was not moved.
+repository/support links use the new name. The local checkout directory was
+renamed to /Users/magnus/GitHub/network-explorer on 2026-10-26.
 
 At the rename, the new identity had its own sandbox, preferences, SSH Keychain
 service and known-hosts file. The local-SSH change above supersedes that storage
