@@ -1,54 +1,78 @@
-# LAN Explorer
+# Network Explorer
 
-A small native macOS app for scanning the local LAN and spotting devices such as Raspberry Pi, Homebridge, MQTT brokers, Home Assistant, and Node-RED.
+<img src="docs/images/app-icon.png" alt="Network Explorer icon" width="96" height="96">
 
-## Current version
+A native macOS app for discovering Macs, Raspberry Pi computers and other devices on your local network, over Wi-Fi or Ethernet. Select a device to inspect its services and, when SSH access is available, read its system information automatically.
 
-- Detects the active private IPv4 network.
-- Scans the `/24` subnet with ping.
-- Reads MAC addresses from ARP when available.
-- Prefers Bonjour/mDNS hostnames, with router DNS as a fallback.
-- Shows hostname, IP, MAC/vendor, response time, and last seen time.
-- Detects common services on ports `22`, `80`, `443`, `1883`, `8581`, `1880`, and `8123`.
-- Highlights likely Raspberry Pi devices by hostname, MAC prefix, or vendor.
-- Native macOS table with Address, Name, Vendor and Device Type columns, keyboard selection, sortable/resizable columns, and toolbar search.
-- Always-visible native device table and device details, including inline port, HTTP, and passwordless SSH information. A resizable content divider leaves the window toolbar continuous.
-- Automatically scans again after a 30-second pause; preserves selection, filtering, and sorting.
-- Follows the system light/dark appearance. Use Command-R to scan; both panels remain visible.
+[Help](https://meg768.github.io/network-explorer/) · [Support](https://meg768.github.io/network-explorer/support.html) · [Privacy](https://meg768.github.io/network-explorer/privacy.html)
 
-## Application identity
+## Features
 
-LAN Explorer is a separate app with bundle identifier `se.egelberg.lan-explorer`.
-It does not migrate preferences from or replace LAN Scanner.
+- Discovers devices in the selected private IPv4 `/24` range using ping and ARP.
+- Resolves device names through Bonjour/mDNS, with DNS as a fallback.
+- Shows addresses, available MAC/vendor information, likely device types, ping and last-seen times.
+- Finds common services, including SSH, web interfaces, file sharing, printers, MQTT, Home Assistant, Homebridge, Node-RED, media servers and databases.
+- Reads supported system information through SSH: operating system, disk usage, memory, temperature, installed software, running services and processes.
+- Keeps the device table and details visible together, with sortable and resizable columns, keyboard selection and toolbar filtering.
+- Automatically starts another scan after a 30-second pause following completion, preserving filtering, sorting and selection.
+- Follows the system's light or dark appearance.
 
-## Build
+## Getting started
 
-Open **`lan-explorer.xcodeproj`** in Xcode and select **lan-explorer → My Mac**.
-Use **Product → Run** to run the app or **Product → Archive** to create an app
-archive in Organizer. Signing uses Magnus's existing development team and the
-bundle identifier remains `se.egelberg.lan-explorer`.
+Requires **macOS 14 or later**.
+
+1. Connect your Mac to the network you want to explore.
+2. Open Network Explorer and allow local-network access if macOS requests it. Scanning starts automatically.
+3. Filter the list by name, address, vendor or device type, then select a device to inspect it.
+4. Use **Scan Network** or **Command-R** to scan again when the app is ready.
+
+Mac and device discovery works without SSH or Remote Login being enabled. There is no SSH settings dialog or key-import step in the app.
+
+## Automatic SSH
+
+Network Explorer runs macOS OpenSSH using your existing private keys, SSH agent, `~/.ssh/config` and normal known-hosts files. It first tries the configured account, or your Mac's account name when no user is configured, then the device accounts `pi` and `root`. It uses the first account that connects successfully.
+
+The remote device must already offer SSH on port **22** and authorize a key available on your Mac. Automatic inspection connects to the discovered IP address, so any per-device SSH configuration rules must match that address.
+
+Connections run without password prompts. Encrypted keys must already be available through your SSH agent or existing macOS SSH Keychain setup. OpenSSH records new host keys in its normal host database and rejects changed keys. Background inspections do not enable port forwarding, agent forwarding or local SSH commands.
+
+The app does not import or copy private keys, store passphrases, or create temporary credential files. See the [SSH guide](https://meg768.github.io/network-explorer/ssh.html) for details.
+
+## Build and test
+
+Open **`network-explorer.xcodeproj`** in Xcode and select **network-explorer → My Mac**, then choose **Product → Run**. The project is configured for Magnus's development team; select your own signing team when building elsewhere.
+
+Build the native application from the command line:
 
 ```bash
-xcodebuild -project lan-explorer.xcodeproj -scheme lan-explorer \
+xcodebuild -project network-explorer.xcodeproj -scheme network-explorer \
   -configuration Debug -destination 'platform=macOS' build
-xcodebuild -project lan-explorer.xcodeproj -scheme lan-explorer \
-  -configuration Release -destination 'generic/platform=macOS' \
-  -archivePath /tmp/LANExplorer.xcarchive archive
+
+xcodebuild -project network-explorer.xcodeproj -scheme network-explorer \
+  -configuration Release -destination 'generic/platform=macOS' build
 ```
 
-## Distribution
+Create a Release archive through **Product → Archive**, or:
 
-Build and archive the application through Xcode. Export archives through Organizer.
+```bash
+xcodebuild -project network-explorer.xcodeproj -scheme network-explorer \
+  -configuration Release -destination 'generic/platform=macOS' \
+  -archivePath /tmp/NetworkExplorer.xcarchive archive
+```
 
-### Mac App Store distribution
+Run the Swift package tests:
 
-App Sandbox is enabled. Configure SSH once in **LAN Explorer > Settings > SSH**:
-select a private key, enter usernames such as `pi, magnus`, save, and test a device.
-The app stores the key and optional passphrase in the local macOS Keychain. SSH
-uses an app-owned known-hosts file; changes to a previously trusted host key are
-rejected. Temporary key material is owner-only and removed after each inspection.
-The original `~/.ssh` files and SSH agent are not used by the Store configuration.
+```bash
+swift test
+```
 
-The same saved key is reused across devices that already authorize it. Network
-and Bonjour discovery work without configuring SSH; detailed system information
-requires successful SSH authentication. See [DISTRIBUTION.md](DISTRIBUTION.md).
+The native app is **Network Explorer.app**, the Swift package/module is **NetworkExplorer**, and the bundle identifier is **`se.egelberg.network-explorer`**.
+
+## Scope and local use
+
+- Discovery checks addresses `.1` through `.254` in the selected IPv4 `/24` range. It does not scan other subnets or discover IPv6-only devices.
+- Results depend on device reachability, local-network permissions, ARP information and network isolation. Vendor and device-type labels are hints.
+- Previously discovered devices and some earlier values are retained during the app session. A listed device is not proof that it is currently online.
+- Service inspection probes selected common TCP ports, rather than every possible port. Available SSH information depends on the remote operating system, tools and account permissions.
+
+The current build is intended for local use. App Sandbox is disabled so OpenSSH can use your existing SSH setup; hardened runtime remains enabled. App Store publication is on hold. Historical build and distribution records are in [DISTRIBUTION.md](DISTRIBUTION.md).

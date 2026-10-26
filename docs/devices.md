@@ -13,7 +13,7 @@ title: Devices and Services
 | Vendor | A vendor hint based on known MAC-address prefixes, when available. |
 | Device Type | Likely device types inferred from the hostname, vendor, and MAC address. |
 
-LAN Explorer prefers names obtained directly through Bonjour/mDNS, with DNS as a fallback. Devices do not always publish a usable name, and router DNS can return outdated or shared names.
+Network Explorer prefers names obtained directly through Bonjour/mDNS, with DNS as a fallback. Devices do not always publish a usable name, and router DNS can return outdated or shared names.
 
 Vendor and device-type labels are hints. Private or randomized MAC addresses, shared hardware, and incomplete network information can make these labels unavailable or inaccurate.
 
@@ -50,6 +50,6 @@ A responding port suggests a service; it does not prove which application is lis
 
 Basic findings can come from the network and HTTP responses. More detailed information, such as operating system, disk usage, memory, temperature, software, or processes, requires successful [SSH access](ssh.html) and suitable tools and permissions on the remote device. The available information varies by device and operating system.
 
-Inspection results are cached during the current app session. Repeated network scans do not refresh every service or system detail. Saving SSH settings clears the inspection cache; quitting and reopening the app also starts a new session.
+Inspection results are cached during the current app session. Repeated network scans do not refresh every service or system detail. Quit and reopen the app to start a new session and inspect devices again.
 
-[Back to LAN Explorer Help](index.html)
+[Back to Network Explorer Help](index.html)

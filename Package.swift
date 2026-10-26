@@ -3,21 +3,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "LANExplorer",
+    name: "NetworkExplorer",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "LANExplorer", targets: ["LANExplorer"])
+        .executable(name: "NetworkExplorer", targets: ["NetworkExplorer"])
     ],
     targets: [
         .executableTarget(
-            name: "LANExplorer",
+            name: "NetworkExplorer",
             resources: [
-                .process("Resources"),
                 .process("../../Resources")
             ]
         ),
-        .testTarget(name: "LANExplorerTests", dependencies: ["LANExplorer"])
+        .testTarget(name: "NetworkExplorerTests", dependencies: ["NetworkExplorer"])
     ]
 )

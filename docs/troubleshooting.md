@@ -8,11 +8,11 @@ title: Troubleshooting
 
 Check that your Mac is connected to Wi-Fi or Ethernet and has an address in a private IPv4 range: `10.x.x.x`, `172.16.x.x` through `172.31.x.x`, or `192.168.x.x`.
 
-LAN Explorer automatically selects an interface and prefers `en0` when it is available. Check the network and interface shown in the window subtitle, especially when Ethernet, Wi-Fi, or a VPN is active. The app currently has no manual interface or scan-range selector.
+Network Explorer automatically selects an interface and prefers `en0` when it is available. Check the network and interface shown in the window subtitle, especially when Ethernet, Wi-Fi, or a VPN is active. The app currently has no manual interface or scan-range selector.
 
 ## Local-network access denied
 
-Where available, open **System Settings → Privacy & Security → Local Network** and enable LAN Explorer. Return to the app and use **Scan Network** or **Command-R**. If needed, quit and reopen the app after changing the permission.
+Where available, open **System Settings → Privacy & Security → Local Network** and enable Network Explorer. Return to the app and use **Scan Network** or **Command-R**. If needed, quit and reopen the app after changing the permission.
 
 An access-denied message is different from a successful scan with no devices. Keep the exact message when reporting a problem.
 
@@ -40,14 +40,18 @@ Only selected common service ports are checked. A service on a different port, a
 
 Detailed system information usually requires SSH. Follow [SSH Access](ssh.html), check that SSH is enabled on the device, and use an account authorized for the selected key. Inspection results are cached for the current session; quit and reopen the app if you need to recheck them after changing the remote device.
 
-## Save or Test connection is unavailable
+## SSH does not sign in automatically
 
-Enter at least one valid username and choose a private key. Testing also requires a device address. A fresh installation intentionally has no preset credentials. Select the private key rather than a `.pub` file; keys larger than 64 KiB are not accepted.
+Check that SSH is enabled on the device and that it authorizes a key available
+through your normal Mac SSH setup. The app tries the configured/default account,
+then `pi` and `root`. There is no separate app configuration.
 
-## SSH authentication fails
+Automatic inspection connects to the discovered IP address when port 22 responds.
+SSH configuration rules for that device must match its IP address. If a key is
+encrypted, make it available through your existing SSH agent or macOS SSH
+Keychain setup. Background connections do not show password prompts.
 
-Confirm that the remote account exists and its authorized keys include the public key matching the selected private key. Check the passphrase for an encrypted key. The app does not use SSH-agent identities, your original SSH configuration, remote account passwords, or custom SSH ports.
+Changed host keys are rejected. Verify the device before updating its matching
+known-hosts entry using your normal SSH tools.
 
-If the message concerns a changed host key, verify the remote device's identity first. The app uses a separate known-hosts file, so changing your Terminal SSH settings alone will not resolve it. Include the error text in a [support request](support.html) without exposing your key, passphrase, or private network details.
-
-[Back to LAN Explorer Help](index.html)
+[Back to Network Explorer Help](index.html)

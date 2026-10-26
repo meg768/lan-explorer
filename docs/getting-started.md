@@ -6,15 +6,15 @@ title: Getting Started
 
 ## 1. Connect to your network
 
-Connect your Mac to the Wi-Fi or Ethernet network containing the devices you want to find. LAN Explorer requires a private IPv4 address and automatically chooses a network interface. The window subtitle shows the selected network and interface.
+Connect your Mac to the Wi-Fi or Ethernet network containing the devices you want to find. Network Explorer requires a private IPv4 address and automatically chooses a network interface. The window subtitle shows the selected network and interface.
 
 The current scanner checks addresses **.1 through .254 in the same /24 range** as your Mac. For example, a Mac at `192.168.1.42` scans `192.168.1.1` through `192.168.1.254`. It does not scan every subnet on a larger network or discover IPv6-only devices.
 
 ## 2. Allow local-network access
 
-Open LAN Explorer and allow access when macOS asks to find devices on your local network.
+Open Network Explorer and allow access when macOS asks to find devices on your local network.
 
-If access was denied, open **System Settings → Privacy & Security → Local Network** and enable LAN Explorer, where that setting is available. Return to the app and scan again. See [Troubleshooting](troubleshooting.html) if access remains unavailable.
+If access was denied, open **System Settings → Privacy & Security → Local Network** and enable Network Explorer, where that setting is available. Return to the app and scan again. See [Troubleshooting](troubleshooting.html) if access remains unavailable.
 
 ## 3. Scan
 
@@ -30,8 +30,10 @@ Use **Filter devices** to search by address, hostname, DNS name, MAC address, ve
 
 Names and device types depend on the information the device exposes. A missing name or ping response does not necessarily mean a device is offline. See [Devices and Services](devices.html).
 
-## 5. Add SSH access if needed
+## 5. Read system information
 
-You can discover devices and inspect service ports without a private key. To read supported system information from devices offering SSH, follow [SSH Access](ssh.html). First launch has no preset usernames or keys.
+When you select a device offering SSH, Network Explorer tries your Mac's existing
+SSH setup automatically. No key import or app configuration is needed.
+See [SSH Access](ssh.html) for details.
 
-[Back to LAN Explorer Help](index.html)
+[Back to Network Explorer Help](index.html)

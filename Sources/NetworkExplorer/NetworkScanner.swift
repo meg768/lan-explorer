@@ -233,76 +233,17 @@ actor NetworkScanner {
     }
 
     private func inspectSSH(device: NetworkDevice) async -> [DeviceInspectionItem] {
-        guard let credentials = try? SSHConfiguration.load(),
-              let session = try? SSHSession(credentials: credentials) else { return [] }
-        defer { withExtendedLifetime(session) {} }
-        let users = SSHConfiguration.usernames
-        var findings: [DeviceInspectionItem] = []
-
-        await withTaskGroup(of: [DeviceInspectionItem].self) { group in
-            for user in users {
-                group.addTask {
-                    let result = await Self.run(
-                        "/usr/bin/ssh",
-                        arguments: session.arguments(user: user, host: device.ipAddress) + [Self.sshInspectionScript],
-                        timeout: 20,
-                        environment: session.environment
-                    )
-
-                    guard result.exitCode == 0 else {
-                        return []
-                    }
-
-                    return Self.sshFindings(from: result.output, user: user)
-                }
-            }
-
-            for await userFindings in group {
-                findings.append(contentsOf: userFindings)
+        for user in SSHConfiguration.connectionUsers {
+            let result = await Self.run(
+                "/usr/bin/ssh",
+                arguments: SSHConfiguration.arguments(user: user, host: device.ipAddress) + [Self.sshInspectionScript],
+                timeout: 20
+            )
+            if result.exitCode == 0 {
+                return Self.sshFindings(from: result.output, user: user ?? "your configured account")
             }
         }
-
-        return Self.deduplicatedFindings(findings)
-    }
-
-    func testSSH(host: String) async -> (succeeded: Bool, message: String) {
-        do {
-            guard let credentials = try SSHConfiguration.load() else {
-                return (false, "Choose and save an SSH key first.")
-            }
-            let session = try SSHSession(credentials: credentials)
-            defer { withExtendedLifetime(session) {} }
-            var errors: [String] = []
-            for user in SSHConfiguration.usernames {
-                let result = await Self.run("/usr/bin/ssh",
-                                            arguments: session.arguments(user: user, host: host) + ["hostname"],
-                                            timeout: 10, environment: session.environment)
-                if result.exitCode == 0 {
-                    let hostname = result.output.components(separatedBy: .newlines).last(where: { !$0.isEmpty }) ?? host
-                    return (true, "Connected as \(user) to \(hostname).")
-                }
-                errors.append(result.output.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
-            return (false, errors.last ?? "Add at least one SSH username.")
-        } catch {
-            return (false, error.localizedDescription)
-        }
-    }
-
-    private static func deduplicatedFindings(_ findings: [DeviceInspectionItem]) -> [DeviceInspectionItem] {
-        var seen: Set<String> = []
-        var deduplicated: [DeviceInspectionItem] = []
-
-        for finding in findings {
-            guard !seen.contains(finding.name) else {
-                continue
-            }
-
-            seen.insert(finding.name)
-            deduplicated.append(finding)
-        }
-
-        return deduplicated
+        return []
     }
 
     private static func inspectHTTP(for host: String, services: [DeviceInspectionItem]) async -> [DeviceInspectionItem] {
@@ -359,7 +300,7 @@ actor NetworkScanner {
         let url = "\(probe.scheme)://\(host):\(probe.port)/"
         let result = await run(
             "/usr/bin/curl",
-            arguments: ["-k", "-L", "--max-time", "2", "-A", "LANExplorer/1.0", "-i", url],
+            arguments: ["-k", "-L", "--max-time", "2", "-A", "NetworkExplorer/1.0", "-i", url],
             timeout: 3
         )
 
@@ -1153,13 +1094,11 @@ actor NetworkScanner {
         ip.split(separator: ".").map { Int($0) ?? 0 }
     }
 
-    private static func run(_ path: String, arguments: [String], timeout: TimeInterval,
-                            environment: [String: String] = [:]) async -> CommandResult {
+    private static func run(_ path: String, arguments: [String], timeout: TimeInterval) async -> CommandResult {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
-        process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
         process.standardOutput = pipe
         process.standardError = pipe
 
@@ -1218,7 +1157,7 @@ actor NetworkScanner {
 // Query the device itself over mDNS: router DNS may give several Macs the same
 // generic name. Keep callbacks, timeout and cleanup on one serial queue.
 private final class BonjourNameQuery: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "se.egelberg.lan-explorer.bonjour")
+    private let queue = DispatchQueue(label: "se.egelberg.network-explorer.bonjour")
     private var reference: DNSServiceRef?
     private var continuation: CheckedContinuation<String?, Never>?
 

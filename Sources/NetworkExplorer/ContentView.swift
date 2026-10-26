@@ -67,15 +67,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("LAN Explorer")
+        .navigationTitle("Network Explorer")
         .navigationSubtitle(store.localNetwork?.displayName ?? "No local IPv4 network")
         .toolbar {
-            ToolbarItem {
-                SettingsLink {
-                    Label("SSH Settings", systemImage: "key")
-                }
-                .help("Configure SSH access for all devices")
-            }
             ToolbarItem {
                 Button(action: store.scan) {
                     Label("Scan Network", systemImage: "arrow.clockwise")
@@ -109,11 +103,9 @@ struct ContentView: View {
         .onChange(of: selectedDeviceID) { _, _ in
             if let selectedDevice { store.inspect(selectedDevice) }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sshConfigurationChanged)) { _ in
-            store.resetInspections()
-            if let selectedDevice { store.inspect(selectedDevice) }
+        .onAppear {
+            store.startAutoScan()
         }
-        .onAppear { store.startAutoScan() }
         .onDisappear { store.stopAutoScan() }
     }
 
@@ -129,6 +121,7 @@ struct ContentView: View {
             )
         }
     }
+
 }
 
 // Only the content is divided; the window toolbar remains a single system toolbar.
