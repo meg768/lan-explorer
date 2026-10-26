@@ -240,7 +240,7 @@ actor NetworkScanner {
                 timeout: 20
             )
             if result.exitCode == 0 {
-                return Self.sshFindings(from: result.output, user: user ?? "your configured account")
+                return Self.sshFindings(from: result.output, user: user, host: device.ipAddress)
             }
         }
         return []
@@ -400,7 +400,7 @@ actor NetworkScanner {
     kv HOME_DIRS "$(find /home -mindepth 1 -maxdepth 1 -type d -printf "%f " 2>/dev/null)"'
     """
 
-    private static func sshFindings(from output: String, user: String) -> [DeviceInspectionItem] {
+    static func sshFindings(from output: String, user: String?, host: String) -> [DeviceInspectionItem] {
         let values = Dictionary(uniqueKeysWithValues: output.split(separator: "\n").compactMap { line -> (String, String)? in
             let parts = line.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             guard parts.count == 2 else {
@@ -417,7 +417,10 @@ actor NetworkScanner {
         })
 
         var findings: [DeviceInspectionItem] = [
-            DeviceInspectionItem(name: "SSH passwordless login", detail: "Passwordless login succeeded as \(values["SSH_USER"] ?? user).", port: nil, systemImage: "key")
+            DeviceInspectionItem(name: "SSH passwordless login",
+                                 detail: "Passwordless login succeeded as \(values["SSH_USER"] ?? user ?? "your configured account").",
+                                 port: nil, systemImage: "key",
+                                 sshURL: SSHConfiguration.terminalURL(user: values["SSH_USER"] ?? user, host: host))
         ]
 
         func add(_ key: String, name: String, icon: String) {
@@ -628,6 +631,9 @@ actor NetworkScanner {
         }
 
         add("Raspberry Pi", if: haystack.contains("raspberry") || haystack.contains("pi-") || haystack.contains("b8:27:eb") || haystack.contains("dc:a6:32"))
+        if let teslaHint = teslaDeviceHint(for: device) {
+            hints.append(teslaHint)
+        }
         add("Apple device", if: haystack.contains("apple") || haystack.contains("macbook") || haystack.contains("iphone") || haystack.contains("ipad") || haystack.contains("watch"))
         add("Mac / macOS candidate", if: haystack == "mac" || haystack.contains("macbook") || haystack.contains("imac") || haystack.contains("mac-mini") || haystack.contains("mac-studio") || haystack.contains("mac.lan") || haystack.contains("mac.local"))
         add("Apple TV / AirPlay candidate", if: haystack.contains("apple-tv") || haystack.contains("appletv") || haystack.contains("airplay") || haystack.contains("tv.local") || haystack.contains("tv.lan"))
@@ -642,6 +648,23 @@ actor NetworkScanner {
         add("Router / gateway candidate", if: device.ipAddress.hasSuffix(".1") || haystack.contains("router") || haystack.contains("gateway"))
 
         return hints
+    }
+
+    private static func teslaDeviceHint(for device: NetworkDevice) -> String? {
+        for name in [device.hostname, device.dnsName].compactMap({ $0?.lowercased() }) {
+            let normalized = name.replacingOccurrences(of: "_", with: "-")
+            for model in ["3", "s", "x", "y"] {
+                if normalized.range(of: "^tesla[- ]+model[- ]*\(model)([-. ]|$)", options: .regularExpression) != nil {
+                    return "Tesla Model \(model.uppercased()) / electric vehicle candidate"
+                }
+            }
+            for model in ["Cybertruck", "Roadster"] {
+                if normalized.range(of: "^tesla[- ]+\(model.lowercased())([-. ]|$)", options: .regularExpression) != nil {
+                    return "Tesla \(model) / electric vehicle candidate"
+                }
+            }
+        }
+        return device.vendor?.localizedCaseInsensitiveContains("tesla") == true ? "Tesla device" : nil
     }
 
     private static func localFindings(for device: NetworkDevice) -> [DeviceInspectionItem] {
@@ -699,6 +722,14 @@ actor NetworkScanner {
         let isRaspberryPi = likelyTypes.contains("Raspberry Pi")
         let isVacuumCandidate = likelyTypes.contains("Vacuum / robot candidate")
         let isMacCandidate = likelyTypes.contains("Mac / macOS candidate")
+        let isTeslaVehicle = likelyTypes.contains { $0.hasPrefix("Tesla ") && $0.contains("electric vehicle candidate") }
+
+        if isTeslaVehicle {
+            notes.append("Tesla model inferred from the network name; vehicle telemetry was not read.")
+            if services.isEmpty {
+                notes.append("No known inspected TCP ports responded on this vehicle.")
+            }
+        }
 
         if isRaspberryPi {
             if systemFindingNames.contains("SSH passwordless login") {
@@ -830,7 +861,7 @@ actor NetworkScanner {
             notes.append("MAC is locally administered, so vendor and device-type guesses can be masked or randomized.")
         }
 
-        if services.isEmpty, !isSamsungDevice, !isAppleTVCandidate, !isVacuumCandidate, !isMacCandidate {
+        if services.isEmpty, !isSamsungDevice, !isAppleTVCandidate, !isVacuumCandidate, !isMacCandidate, !isTeslaVehicle {
             notes.append("No known inspected ports responded. It may still be a phone, watch, TV, sensor, vacuum or sleeping device.")
         }
 
@@ -1052,7 +1083,7 @@ actor NetworkScanner {
         return dnsName
     }
 
-    private static func vendorName(for macAddress: String) -> String? {
+    static func vendorName(for macAddress: String) -> String? {
         let prefix = macAddress
             .split(separator: ":")
             .prefix(3)
@@ -1060,6 +1091,7 @@ actor NetworkScanner {
             .lowercased()
 
         let vendors = [
+            "4c:fc:aa": "Tesla",
             "b8:27:eb": "Raspberry Pi Foundation",
             "dc:a6:32": "Raspberry Pi Foundation",
             "e4:5f:01": "Raspberry Pi Foundation",

@@ -234,7 +234,10 @@ private struct DeviceDetails: View {
                                     Text("No services found").foregroundStyle(.secondary)
                                 } else {
                                     ForEach(inspection.openServices) { item in
-                                        InspectionRow(item: item)
+                                        InspectionRow(item: item, sshURL: item.port == 22
+                                            ? (inspection.systemFindings.compactMap(\.sshURL).first
+                                                ?? SSHConfiguration.terminalURL(user: nil, host: device.ipAddress))
+                                            : nil)
                                     }
                                 }
                             }
@@ -276,6 +279,8 @@ private struct DeviceDetails: View {
 
 private struct InspectionRow: View {
     let item: DeviceInspectionItem
+    var sshURL: URL? = nil
+    @State private var terminalError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -287,8 +292,39 @@ private struct InspectionRow: View {
             if let progress = item.progress {
                 ProgressView(value: progress)
             }
+            if let sshURL {
+                Button {
+                    openTerminal(sshURL)
+                } label: {
+                    Label("Open in Terminal", systemImage: "terminal")
+                }
+                .buttonStyle(.bordered)
+                .help("Connect to \(sshURL.user.map { "\($0)@" } ?? "")\(sshURL.host ?? "") using SSH")
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let terminalError {
+                    Text(terminalError).font(.caption).foregroundStyle(.red)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+
+    private func openTerminal(_ url: URL) {
+        terminalError = nil
+        guard let terminal = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Terminal") else {
+            terminalError = "Terminal could not be found."
+            return
+        }
+        Task { @MainActor in
+            do {
+                try await NSWorkspace.shared.open([url], withApplicationAt: terminal,
+                                                  configuration: NSWorkspace.OpenConfiguration())
+            } catch {
+                terminalError = "Could not open Terminal: \(error.localizedDescription)"
+            }
+        }
     }
 }

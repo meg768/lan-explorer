@@ -17,6 +17,10 @@ Network Explorer prefers names obtained directly through Bonjour/mDNS, with DNS 
 
 Vendor and device-type labels are hints. Private or randomized MAC addresses, shared hardware, and incomplete network information can make these labels unavailable or inaccurate.
 
+Tesla model names such as `tesla_model_3` are shown as electric-vehicle candidates.
+The model is inferred from the network name; a Tesla vendor match alone is shown
+as a Tesla device. Identification does not read vehicle telemetry.
+
 ## Activity and retained results
 
 The details panel shows the MAC address, DNS name when available, ping response, and **Last seen** time. Discovery combines ping probes with the Mac's ARP information, so results depend on what is reachable and present in the local neighbor cache.

@@ -21,6 +21,12 @@ The app does not create accounts, install keys or ask for login passwords.
 Encrypted keys need to be available through your existing SSH agent or macOS
 SSH Keychain configuration.
 
+Click **Open in Terminal** on the **SSH** row under **Services** to start an
+interactive SSH session in Apple's Terminal app. The button is available whenever
+the SSH port responds, even if automatic sign-in failed. After a successful
+inspection it uses the same account; otherwise OpenSSH uses your configured or
+default Mac account. You can enter a password in Terminal when needed.
+
 Automatic inspection uses the discovered IP address and starts when SSH port 22
 responds. Per-device SSH configuration rules must match that address.
 If access is unavailable, network discovery and service inspection still work.

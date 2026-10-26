@@ -3,6 +3,26 @@ import XCTest
 @testable import NetworkExplorer
 
 final class SSHConfigurationTests: XCTestCase {
+    func testTerminalLinkUsesAccountReportedByTheDevice() {
+        let finding = NetworkScanner.sshFindings(from: "SSH_USER=pi\n", user: nil, host: "192.0.2.41").first
+        XCTAssertEqual(finding?.sshURL?.absoluteString, "ssh://pi@192.0.2.41")
+        XCTAssertEqual(finding?.detail, "Passwordless login succeeded as pi.")
+    }
+
+    func testTerminalLinkPreservesConfiguredUserWhenNotReported() {
+        XCTAssertEqual(NetworkScanner.sshFindings(from: "OS=Linux\n", user: "admin", host: "192.0.2.41").first?.sshURL?.user, "admin")
+        XCTAssertEqual(SSHConfiguration.terminalURL(user: nil, host: "192.0.2.41")?.absoluteString, "ssh://192.0.2.41")
+    }
+
+    func testTerminalLinkRejectsCommandsAndInvalidAddresses() {
+        for user in ["-oProxyCommand=sh", "pi;whoami", "$(whoami)", "pi@host", "pi\nexit", ""] {
+            XCTAssertNil(SSHConfiguration.terminalURL(user: user, host: "192.0.2.41"))
+        }
+        for host in ["192.0.2.256", "192.0.2", "192.0.2.41;whoami", "-oProxyCommand=sh"] {
+            XCTAssertNil(SSHConfiguration.terminalURL(user: "pi", host: host))
+        }
+    }
+
     func testAutomaticAccessKeepsMacAndOriginalDeviceAccounts() {
         XCTAssertEqual(SSHConfiguration.connectionUsers, [nil, "pi", "root"])
     }

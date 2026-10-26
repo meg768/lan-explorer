@@ -107,13 +107,15 @@ struct DeviceInspectionItem: Identifiable, Hashable {
     let port: Int?
     let systemImage: String
     let progress: Double?
+    let sshURL: URL?
 
-    init(name: String, detail: String, port: Int?, systemImage: String, progress: Double? = nil) {
+    init(name: String, detail: String, port: Int?, systemImage: String, progress: Double? = nil, sshURL: URL? = nil) {
         self.name = name
         self.detail = detail
         self.port = port
         self.systemImage = systemImage
         self.progress = progress
+        self.sshURL = sshURL
     }
 
     var id: String {
